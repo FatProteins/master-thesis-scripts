@@ -3,3 +3,6 @@ wrong-data/*
 wrong-figures/*
 venv/*
 saturated-data/*
+fit-measurement/*
+leader-crash-measurement/*
+leader-straggler-measurement/*
