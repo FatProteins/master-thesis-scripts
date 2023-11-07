@@ -162,6 +162,6 @@ ax.set_xticks([2**0, 2**1, 2**2, 2**3, 2**5, 2**7, 2**9, 2**11, 2**13, 2**15, 2*
 ax.set_xlim(0, 2**18)
 ax.set_ylim(0, 60000)
 # ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig(f"throughput_concurrency_saturation_right.pdf", bbox_inches='tight', pad_inches=0.05)
+# plt.savefig(f"throughput_concurrency_saturation_right.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

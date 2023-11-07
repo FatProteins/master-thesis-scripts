@@ -75,7 +75,7 @@ def plot_performance(filename: str, ax=None):
         df.plot(ax=ax)
 
 
-filename = "data/5900-kv_pairs_2023-11-01T19-44-15-leader_crash_5900_client.csv"
+filename = "leader-crash-measurement/crash_performance_measurement/4096-kv_pairs_2023-11-07T04-49-36.csv"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -114,6 +114,6 @@ if num_clients == 1:
 ax.set_xlim(0, 60)
 # ax.set_ylim(0, ax.get_ylim()[1])
 ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig(f"leader_crash_{num_clients}_client_{random.Random().randint(0, 10000)}.pdf", bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"new-thesis-figures/leader_crash_{num_clients}_client.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()
