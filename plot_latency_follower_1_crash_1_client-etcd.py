@@ -3,14 +3,13 @@ import re
 import sys
 from collections import defaultdict
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy
 import numpy as np
 import pandas as pd
 
 
-def plot_performance(filename: str, ax=None, color=None):
+def plot_performance(filename: str, ax=None):
     crash_end_seconds = 0
     latency_dict: defaultdict[int, list] = defaultdict(list)
     with open(filename, "r") as file:
@@ -26,9 +25,9 @@ def plot_performance(filename: str, ax=None, color=None):
             start_timestamp = int(split[3])
             end_timestamp = int(split[4])
             success = split[2]
-            # if success != 'true':
-            #     print('Entry with error encountered')
-            #     continue
+            if success != 'true':
+                print('Entry with error encountered')
+                continue
             latency = end_timestamp - start_timestamp
             latencies.append(latency)
             start_seconds = int(start_timestamp / 1000 / 1000 / 1000)
@@ -40,7 +39,7 @@ def plot_performance(filename: str, ax=None, color=None):
             # end_times.append(datetime.datetime.fromtimestamp())  # from nanoseconds to seconds
 
     latency_array = []
-    indices = np.arange(90)
+    indices = np.arange(80)
     min_start = np.min(list(latency_dict.keys()))
     for i in indices:
         if len(latency_dict[i + min_start]) == 0:
@@ -65,19 +64,12 @@ def plot_performance(filename: str, ax=None, color=None):
         numpy.set_printoptions(threshold=sys.maxsize)
         # print(end_times)
         # print(second_counts)
-        shift_by = 15
-        end_shift = shift_by + 75
-        rdf = pd.DataFrame(index=indices[shift_by:end_shift] - (shift_by + shift_by // 2),
-                           data=latency_array[shift_by:end_shift]) \
-            .rolling(15, center=True).mean()
+        shift_by = 10
+        rdf = pd.DataFrame(index=indices[shift_by:] - shift_by, data=latency_array[shift_by:]) \
+            # .rolling(1, center=True).mean()
         rdf_portion = rdf[0:]
-        # print(rdf_portion)
-        print(f'Latency full mean: {np.mean(latency_array[shift_by:end_shift])}')
-        if ax is not None:
-            rdf_ax = rdf_portion.plot(color=color, ax=ax, marker='*')
-        else:
-            rdf_ax = rdf_portion.plot(color=color)
-
+        print(rdf_portion)
+        rdf_ax = rdf_portion.plot(color='k', zorder=3)
         # rdf_ax.axvline(25, color='r', linestyle='--', zorder=1)
         # rdf_ax.text(26, 100, 'Follower Crash', color='r')
         # rdf_ax.axvline(35, color='r', linestyle='--')
@@ -85,6 +77,7 @@ def plot_performance(filename: str, ax=None, color=None):
         return rdf_ax
 
 
+filename = "final-measurements/etcd-data/old-faults/1-F-C-etcd_2023-11-12T06-23-32.csv"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -94,33 +87,27 @@ def plot_performance(filename: str, ax=None, color=None):
 #     filename = sys.argv[1]
 
 
-ax = plot_performance("final-measurements/etcd-data/fit-measurement/standalone/4096-kv_pairs_2023-11-12T06-45-22.csv", ax=None, color='royalblue')
-plot_performance("final-measurements/etcd-data/fit-measurement/internal-selection/4096-kv_pairs_2023-11-11T14-19-25.csv", ax, 'orange')
-plot_performance("final-measurements/etcd-data/fit-measurement/external-selection/4096-kv_pairs_2023-11-12T06-57-20.csv", ax, 'k')
+match = re.search("([0-9]+)-(.-.-)?.*", filename)
+num_clients = int(match.group(1))
+ax = plot_performance(filename)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
-# ax.axvline(25, ymin=0.33, color='r', linestyle='--', zorder=1)
-# ax.text(18, 2050000, 'Leader\nCrash', color='r')
-# ax.axvline(36, ymin=0.04, color='b', linestyle='--', zorder=1)
-# ax.text(37, 2000000, 'Crashed Leader\nRejoins\nAs Follower', color='b')
-# ax.axvline(27, ymin=0.24, color='darkorange', linestyle='--', zorder=1)
-# ax.text(28, 2000000, 'New\nLeader\nElected', color='darkorange')
+ax.grid(True, zorder=1)
+ax.axvline(25, color='r', linestyle='--', zorder=2, lw=2)
+ax.text(17, ax.get_ylim()[1]/2, 'Follower\nCrash', color='r')
+ax.axvline(35, color='b', linestyle='--', zorder=2, lw=2)
+ax.text(36, ax.get_ylim()[1]/2, 'Follower\nRestart', color='b')
 
 # ax.legend(['Performance'])
-ax.legend(['Standalone', 'FIT Internal Selection', 'FIT External Selection'], loc='lower right')
-# ax.legend().set_visible(False)
-ax.set_xlabel('Time [s]')
+ax.legend().set_visible(False)
+ax.set_xlabel('Seconds')
 ax.set_ylabel('Latency [μs]')
 ax.set_xticks(np.arange(0, 65, 5))
-ax.grid(True)
+ax.set_yticks(np.arange(0, ax.get_ylim()[1]+100, 200))
 
 # ax.set_xlim(0, ax.get_xlim()[1])
 ax.set_xlim(0, 60)
 # ax.set_ylim(0, ax.get_ylim()[1])
-ax.set_yticks(np.arange(0, 90001, 10000))
-
-# ax.get_yaxis().set_major_formatter(mpl.ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
-# ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig("final-thesis-figures/latency_fit_performance.pdf", bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"final-thesis-figures/latency_follower_crash_1_client_etcd.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

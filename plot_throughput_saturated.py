@@ -41,16 +41,16 @@ def avg_throughput(filename: str):
     mean_latency = np.mean(latencies)
     print(f'Mean latency: {mean_latency}')
 
-    shift_by = 2
+    shift_by = 10
     print(filename)
     print(counts)
-    mean_throughput = np.mean(counts[shift_by:-shift_by])
+    mean_throughput = np.mean(counts[shift_by:shift_by + 60])
+    stddev_throughput = np.std(counts[shift_by:shift_by + 60])
     print(f"Mean throughput: {mean_throughput}")
     print()
-    return mean_throughput
+    return mean_throughput, stddev_throughput
 
 
-dirname = "./saturated-data/third_saturation_measurement"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -123,14 +123,50 @@ third_files = [
     # '524288-kv_pairs_2023-11-06T03-02-00.csv',
     # '1048576-kv_pairs_2023-11-06T03-02-15.csv',
 ]
+new_files = [
+    '1-kv_pairs_2023-11-11T13-56-12.csv',
+    '2-kv_pairs_2023-11-11T13-58-08.csv',
+    '4-kv_pairs_2023-11-11T14-00-03.csv',
+    '8-kv_pairs_2023-11-11T14-01-59.csv',
+    '16-kv_pairs_2023-11-11T14-03-55.csv',
+    '32-kv_pairs_2023-11-11T14-05-50.csv',
+    '64-kv_pairs_2023-11-11T14-07-46.csv',
+    '128-kv_pairs_2023-11-11T14-09-43.csv',
+    '256-kv_pairs_2023-11-11T14-11-39.csv',
+    '512-kv_pairs_2023-11-11T14-13-35.csv',
+    '1024-kv_pairs_2023-11-11T14-15-31.csv',
+    '2048-kv_pairs_2023-11-11T14-17-28.csv',
+    '4096-kv_pairs_2023-11-11T14-19-25.csv',
+    '8192-kv_pairs_2023-11-11T14-21-21.csv',
+    # '8704-kv_pairs_2023-11-12T02-22-45.csv',
+    # '9216-kv_pairs_2023-11-12T02-24-43.csv',
+    # '9728-kv_pairs_2023-11-12T02-26-48.csv',
+    # '10240-kv_pairs_2023-11-12T02-28-46.csv',
+    # '10752-kv_pairs_2023-11-12T02-30-44.csv',
+    # '11264-kv_pairs_2023-11-12T02-32-43.csv',
+    # '11776-kv_pairs_2023-11-12T02-34-41.csv',
+    '12288-kv_pairs_2023-11-12T02-36-39.csv',
+    # '12800-kv_pairs_2023-11-12T02-38-37.csv',
+    # '13312-kv_pairs_2023-11-12T02-40-36.csv',
+    # '13824-kv_pairs_2023-11-12T02-42-34.csv',
+    # '14336-kv_pairs_2023-11-12T02-44-32.csv',
+    # '14848-kv_pairs_2023-11-12T02-46-30.csv',
+    # '15360-kv_pairs_2023-11-12T02-48-28.csv',
+    # '15872-kv_pairs_2023-11-12T02-50-26.csv',
+    '16384-kv_pairs_2023-11-11T14-23-18.csv',
+    '32768-kv_pairs_2023-11-11T14-25-16.csv',
+    '65536-kv_pairs_2023-11-11T14-27-14.csv',
+]
 indices = []
 data = []
-for filename in third_files:
+stddev = []
+for filename in new_files:
     match = re.search("([0-9]+)-kv_pairs.*", filename)
     num_clients = int(match.group(1))
-    mean_throughput = avg_throughput(os.path.join(dirname, filename))
+    mean_throughput, stddev_throughput = avg_throughput(os.path.join('./final-measurements/etcd-data/saturation', filename))
     indices.append(num_clients)
     data.append(mean_throughput)
+    stddev.append(stddev_throughput)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.axvline(25, ymax=0.86, color='r', linestyle='--', zorder=1)
@@ -142,7 +178,7 @@ for filename in third_files:
 df = pd.DataFrame(index=indices, data=data)
 print(indices)
 print(data)
-ax = df.plot(linestyle='none', marker='x', color='k', markersize='10', clip_on=False, zorder=10)
+ax = df.plot(linestyle='none', marker='d', color='k', clip_on=False, zorder=10, yerr=stddev, capsize=4)
 ax.legend().set_visible(False)
 ax.grid(True)
 ax.set_xlabel('Concurrent Clients')
@@ -156,12 +192,12 @@ title = f'Throughput for {num_clients} Concurrent Client Requests'
 if num_clients == 1:
     title = f'Throughput for Sequential Client Requests'
 
-ax.set_xticks([2**0, 2**1, 2**2, 2**3, 2**5, 2**7, 2**9, 2**11, 2**13, 2**15, 2**17])
+ax.set_xticks([2 ** 0, 2 ** 1, 2 ** 2, 2 ** 3, 2 ** 4, 2 ** 6, 2 ** 8, 2 ** 10, 2 ** 12, 2 ** 14, 2 ** 16])
 # ax.set_title(title)
 # ax.set_xlim(0, ax.get_xlim()[1])
-ax.set_xlim(0, 2**18)
-ax.set_ylim(0, 60000)
+ax.set_xlim(0, 2 ** 17)
+ax.set_ylim(0, 80000)
 # ax.set_ylim(0, ax.get_ylim()[1])
-# plt.savefig(f"throughput_concurrency_saturation_right.pdf", bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"final-thesis-figures/throughput_concurrency_saturation_etcd.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

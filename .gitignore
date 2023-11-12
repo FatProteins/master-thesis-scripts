@@ -6,3 +6,8 @@ saturated-data/*
 fit-measurement/*
 leader-crash-measurement/*
 leader-straggler-measurement/*
+bftsmart-performance/*
+bftsmart-saturation/*
+bftsmart-temp-performance/*
+etcd-experiments/*
+final-measurements/*

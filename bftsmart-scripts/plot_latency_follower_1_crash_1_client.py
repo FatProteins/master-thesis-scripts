@@ -22,6 +22,8 @@ def plot_performance(filename: str, ax=None):
                 continue
 
             split = line.strip().split(',')
+            if len(split) != 5:
+                continue
             start_timestamp = int(split[3])
             end_timestamp = int(split[4])
             success = split[2]
@@ -77,7 +79,7 @@ def plot_performance(filename: str, ax=None):
         return rdf_ax
 
 
-filename = "data/1-kv_pairs_2023-11-01T19-31-59-leader_crash_1_client.csv"
+filename = "../bftsmart-performance/follower-crash/1-bftsmart_2023-11-11T09:47:24.274175427.csv"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -87,29 +89,27 @@ filename = "data/1-kv_pairs_2023-11-01T19-31-59-leader_crash_1_client.csv"
 #     filename = sys.argv[1]
 
 
-match = re.search("([0-9]+)-kv_pairs.*", filename)
+match = re.search("([0-9]+)-bftsmart.*", filename)
 num_clients = int(match.group(1))
 ax = plot_performance(filename)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
-ax.axvline(25, ymax=0.93, color='r', linestyle='--', zorder=1)
-ax.text(18, 820, 'Leader\nCrash', color='r')
-ax.axvline(36, ymax=0.78, color='b', linestyle='--', zorder=1)
-ax.text(37, 800, 'Crashed Leader\nRejoins\nAs Follower', color='b')
-ax.axvline(26, ymax=0.94, color='darkorange', linestyle='--', zorder=1)
-ax.text(27, 800, 'New\nLeader\nElected', color='darkorange')
+ax.axvline(25, ymax=0.9, color='r', linestyle='--', zorder=1)
+ax.text(17, 800, 'Follower\nCrash', color='r')
+ax.axvline(36, ymax=0.96, color='b', linestyle='--', zorder=1)
+ax.text(38, 750, 'Follower\nRejoins\nCluster', color='b')
 
 # ax.legend(['Performance'])
 ax.legend().set_visible(False)
 ax.set_xlabel('Seconds')
 ax.set_ylabel('Latency [μs]')
 ax.set_xticks(np.arange(0, 65, 5))
-ax.set_yticks(np.arange(0, 1601, 100))
+ax.set_yticks(np.arange(0, 1501, 100))
 
 # ax.set_xlim(0, ax.get_xlim()[1])
 ax.set_xlim(0, 60)
 ax.set_ylim(0, ax.get_ylim()[1])
 # ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig(f"latency_leader_crash_{num_clients}_client_right.pdf", bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"latency_follower_1_crash_{num_clients}_client_bftsmart.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

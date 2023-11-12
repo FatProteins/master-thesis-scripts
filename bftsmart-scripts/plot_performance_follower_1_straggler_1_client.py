@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def plot_performance(filename: str, ax=None, color=None):
+def plot_performance(filename: str, ax=None):
     crash_end_seconds = 0
     with open(filename, "r") as file:
         latencies = []
@@ -24,7 +24,7 @@ def plot_performance(filename: str, ax=None, color=None):
             end_timestamp = int(split[4])
             success = split[2]
             if success != 'true':
-                # print('Entry with error encountered')
+                print('Entry with error encountered')
                 continue
             latencies.append(end_timestamp - start_timestamp)
             end_seconds = int(end_timestamp / 1000 / 1000 / 1000)
@@ -35,7 +35,7 @@ def plot_performance(filename: str, ax=None, color=None):
 
     min_end_time = np.min(end_times)
     end_times = np.subtract(end_times, min_end_time)
-    print(f'Crash at {crash_end_seconds - min_end_time} after start')
+    print(f'Straggle at {crash_end_seconds - min_end_time} after start')
     np.sort(end_times)
     unique, counts = np.unique(end_times, return_counts=True)
     second_counts = dict(zip(unique, counts))
@@ -57,25 +57,25 @@ def plot_performance(filename: str, ax=None, color=None):
         numpy.set_printoptions(threshold=sys.maxsize)
         # print(end_times)
         # print(second_counts)
-        shift_by = 15
-        end_shift = shift_by + 75
-        rdf = pd.DataFrame(index=unique[shift_by:end_shift] - (shift_by + shift_by // 2),
-                           data=counts[shift_by:end_shift]) \
-            .rolling(15, center=True).mean()
+        shift_by = 10
+        rdf = pd.DataFrame(index=unique[shift_by:] - shift_by, data=counts[shift_by:]) \
+            .rolling(1, center=True).mean()
         rdf_portion = rdf[0:]
-        print(f'Throughput full mean: {np.mean(counts[shift_by:end_shift])}')
         # print(rdf_portion)
-        if ax is not None:
-            rdf_ax = rdf_portion.plot(color=color, ax=ax)
-        else:
-            rdf_ax = rdf_portion.plot(color=color)
+        rdf_ax = rdf_portion.plot(color='k')
         # rdf_ax.axvline(25, color='r', linestyle='--', zorder=1)
         # rdf_ax.text(26, 100, 'Follower Crash', color='r')
         # rdf_ax.axvline(35, color='r', linestyle='--')
         # rdf_ax.arrow(10, 300, 14, 133, width=1, color='k')
         return rdf_ax
 
+    if ax is None:
+        return df.plot()
+    else:
+        df.plot(ax=ax)
 
+
+filename = "data/1-kv_pairs_2023-11-01T23-03-53-follower_1_straggler_1_client.csv"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -85,31 +85,33 @@ def plot_performance(filename: str, ax=None, color=None):
 #     filename = sys.argv[1]
 
 
-ax = plot_performance("final-measurements/etcd-data/fit-measurement/standalone/4096-kv_pairs_2023-11-12T06-45-22.csv", ax=None, color='royalblue')
-plot_performance("final-measurements/etcd-data/fit-measurement/internal-selection/4096-kv_pairs_2023-11-11T14-19-25.csv", ax, 'orange')
-plot_performance("final-measurements/etcd-data/fit-measurement/external-selection/4096-kv_pairs_2023-11-12T06-57-20.csv", ax, 'k')
+match = re.search("([0-9]+)-kv_pairs.*", filename)
+num_clients = int(match.group(1))
+ax = plot_performance(filename)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
-# ax.axvline(25, ymax=0.8, color='r', linestyle='--', zorder=1)
-# ax.text(18, 20000, 'Leader\nCrash', color='r')
-# ax.axvline(36, ymax=0.78, color='b', linestyle='--', zorder=1)
-# ax.text(37, 18000, 'Crashed Leader\nRejoins\nAs Follower', color='b')
-# ax.axvline(27, ymin=0.02, ymax=1.0, color='darkorange', linestyle='--', zorder=1)
-# ax.text(28, 58000, 'New\nLeader\nElected', color='darkorange')
+ax.axvline(25, ymax=0.82, color='m', linestyle='--', zorder=1)
+ax.text(15, 400, 'Follower\nStarts\nStraggling', color='m')
+ax.axvline(40, ymax=0.82, color='c', linestyle='--', zorder=1)
+ax.text(41, 400, 'Follower\nStops\nStraggling', color='c')
 # ax.annotate('', xy=(31.5, 5100), xytext=(38, 5100), arrowprops={'width': 1, 'headwidth': 6, 'color': 'darkorange'}, color='darkorange', fontsize='large')
 
-ax.legend(['Standalone', 'FIT Internal Selection', 'FIT External Selection'], loc='lower right')
-# ax.legend().set_visible(False)
-ax.set_xlabel('Time [s]')
+
+# ax.legend(['Performance'])
+ax.legend().set_visible(False)
+ax.set_xlabel('Seconds')
 ax.set_ylabel('Throughput [req/s]')
 ax.set_xticks(np.arange(0, 65, 5))
-ax.set_yticks(np.arange(0, 80001, 10000))
+ax.set_yticks(np.arange(0, 801, 100))
+title = f'Throughput for {num_clients} Concurrent Client Requests'
+if num_clients == 1:
+    title = f'Throughput for Sequential Client Requests'
 
 # ax.set_title(title)
 # ax.set_xlim(0, ax.get_xlim()[1])
 ax.set_xlim(0, 60)
 # ax.set_ylim(0, ax.get_ylim()[1])
-ax.grid(True)
-plt.savefig(f"final-thesis-figures/throughput_fit_performance.pdf", bbox_inches='tight', pad_inches=0.05)
+ax.set_ylim(0, ax.get_ylim()[1])
+plt.savefig(f"follower_1_straggler_{num_clients}_client_{random.Random().randint(0, 10000)}.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

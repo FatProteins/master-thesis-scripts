@@ -38,7 +38,7 @@ def avg_throughput(filename: str):
             # end_times.append(datetime.datetime.fromtimestamp())  # from nanoseconds to seconds
 
     latency_array = []
-    indices = np.arange(14)
+    indices = np.arange(90)
     min_start = np.min(list(latency_dict.keys()))
     for i in indices:
         if len(latency_dict[i + min_start]) == 0:
@@ -48,13 +48,14 @@ def avg_throughput(filename: str):
 
     latency_array = np.array(latency_array)
 
-    shift_by = 2
+    shift_by = 10
     print(filename)
-    mean_latency = np.mean(latency_array[shift_by:-shift_by])
+    mean_latency = np.mean(latency_array[shift_by:shift_by+60])
+    stddev_latency = np.std(latency_array[shift_by:shift_by+60])
     print(latency_array[shift_by:-shift_by])
     print(f"Mean latency: {mean_latency}")
     print()
-    return mean_latency
+    return mean_latency, stddev_latency
 
 
 dirname = "./saturated-data/third_saturation_measurement"
@@ -130,14 +131,50 @@ third_files = [
     # '524288-kv_pairs_2023-11-06T03-02-00.csv',
     # '1048576-kv_pairs_2023-11-06T03-02-15.csv',
 ]
+new_files = [
+    '1-kv_pairs_2023-11-11T13-56-12.csv',
+    '2-kv_pairs_2023-11-11T13-58-08.csv',
+    '4-kv_pairs_2023-11-11T14-00-03.csv',
+    '8-kv_pairs_2023-11-11T14-01-59.csv',
+    '16-kv_pairs_2023-11-11T14-03-55.csv',
+    '32-kv_pairs_2023-11-11T14-05-50.csv',
+    '64-kv_pairs_2023-11-11T14-07-46.csv',
+    '128-kv_pairs_2023-11-11T14-09-43.csv',
+    '256-kv_pairs_2023-11-11T14-11-39.csv',
+    '512-kv_pairs_2023-11-11T14-13-35.csv',
+    '1024-kv_pairs_2023-11-11T14-15-31.csv',
+    '2048-kv_pairs_2023-11-11T14-17-28.csv',
+    '4096-kv_pairs_2023-11-11T14-19-25.csv',
+    '8192-kv_pairs_2023-11-11T14-21-21.csv',
+    # '8704-kv_pairs_2023-11-12T02-22-45.csv',
+    # '9216-kv_pairs_2023-11-12T02-24-43.csv',
+    # '9728-kv_pairs_2023-11-12T02-26-48.csv',
+    # '10240-kv_pairs_2023-11-12T02-28-46.csv',
+    # '10752-kv_pairs_2023-11-12T02-30-44.csv',
+    # '11264-kv_pairs_2023-11-12T02-32-43.csv',
+    # '11776-kv_pairs_2023-11-12T02-34-41.csv',
+    '12288-kv_pairs_2023-11-12T02-36-39.csv',
+    # '12800-kv_pairs_2023-11-12T02-38-37.csv',
+    # '13312-kv_pairs_2023-11-12T02-40-36.csv',
+    # '13824-kv_pairs_2023-11-12T02-42-34.csv',
+    # '14336-kv_pairs_2023-11-12T02-44-32.csv',
+    # '14848-kv_pairs_2023-11-12T02-46-30.csv',
+    # '15360-kv_pairs_2023-11-12T02-48-28.csv',
+    # '15872-kv_pairs_2023-11-12T02-50-26.csv',
+    '16384-kv_pairs_2023-11-11T14-23-18.csv',
+    '32768-kv_pairs_2023-11-11T14-25-16.csv',
+    '65536-kv_pairs_2023-11-11T14-27-14.csv',
+]
 indices = []
 data = []
-for filename in third_files:
+stddev = []
+for filename in new_files:
     match = re.search("([0-9]+)-kv_pairs.*", filename)
     num_clients = int(match.group(1))
-    mean_throughput = avg_throughput(os.path.join(dirname, filename))
+    mean_latency, stddev_latency = avg_throughput(os.path.join('./final-measurements/etcd-data/saturation', filename))
     indices.append(num_clients)
-    data.append(mean_throughput)
+    data.append(mean_latency)
+    stddev.append(stddev_latency)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.axvline(25, ymax=0.86, color='r', linestyle='--', zorder=1)
@@ -149,7 +186,7 @@ for filename in third_files:
 df = pd.DataFrame(index=indices, data=data)
 print(indices)
 print(data)
-ax = df.plot(linestyle='none', marker='.', color='darkgreen', markersize='10', clip_on=False, zorder=10)
+ax = df.plot(linestyle='none', marker='*', color='darkgreen', clip_on=False, zorder=10, yerr=stddev, capsize=4)
 ax.legend().set_visible(False)
 ax.grid(True)
 ax.set_xlabel('Concurrent Clients')
@@ -164,7 +201,8 @@ title = f'Throughput for {num_clients} Concurrent Client Requests'
 if num_clients == 1:
     title = f'Throughput for Sequential Client Requests'
 
-ax.set_xticks([2**0, 2**1, 2**2, 2**3, 2**5, 2**7, 2**9, 2**11, 2**13, 2**15, 2**17])
+ax.set_xticks([2 ** 0, 2 ** 1, 2 ** 2, 2 ** 3, 2 ** 4, 2 ** 6, 2 ** 8, 2 ** 10, 2 ** 12, 2 ** 14, 2 ** 16])
+ax.set_xlim(0, 2 ** 17)
 yticks = [0]
 yticks.extend([10**i for i in range(1, 8)])
 ax.set_yticks(yticks)
@@ -174,6 +212,6 @@ ax.set_ylim(0, 10**7)
 # ax.set_xlim(0, 2**18)
 # ax.set_ylim(0, 2**22)
 # ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig(f"latency_concurrency_saturation_right.pdf", bbox_inches='tight', pad_inches=0.05)
+plt.savefig(f"final-thesis-figures/latency_concurrency_saturation_etcd.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()

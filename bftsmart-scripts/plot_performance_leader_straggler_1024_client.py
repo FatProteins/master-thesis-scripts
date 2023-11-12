@@ -1,7 +1,6 @@
 import random
 import re
 import sys
-from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy
@@ -11,7 +10,6 @@ import pandas as pd
 
 def plot_performance(filename: str, ax=None):
     crash_end_seconds = 0
-    latency_dict: defaultdict[int, list] = defaultdict(list)
     with open(filename, "r") as file:
         latencies = []
         end_times = []
@@ -28,34 +26,29 @@ def plot_performance(filename: str, ax=None):
             if success != 'true':
                 print('Entry with error encountered')
                 continue
-            latency = end_timestamp - start_timestamp
-            latencies.append(latency)
-            start_seconds = int(start_timestamp / 1000 / 1000 / 1000)
-            latency_dict[start_seconds].append(latency / 1000)  # microseconds
+            latencies.append(end_timestamp - start_timestamp)
             end_seconds = int(end_timestamp / 1000 / 1000 / 1000)
             end_times.append(end_seconds)
             if split[0] == 'crash':
                 crash_end_seconds = end_seconds
             # end_times.append(datetime.datetime.fromtimestamp())  # from nanoseconds to seconds
 
-    latency_array = []
-    indices = np.arange(80)
-    min_start = np.min(list(latency_dict.keys()))
-    for i in indices:
-        if len(latency_dict[i + min_start]) == 0:
-            latency_array.append(np.NaN)  # microseconds
-        else:
-            latency_array.append(int(np.mean(latency_dict[i + min_start])))
-
-    latency_array = np.array(latency_array)
-
     min_end_time = np.min(end_times)
-    print(f'Crash at {crash_end_seconds - min_end_time} after start')
+    end_times = np.subtract(end_times, min_end_time)
+    print(f'Straggle at {crash_end_seconds - min_end_time} after start')
+    np.sort(end_times)
+    unique, counts = np.unique(end_times, return_counts=True)
+    second_counts = dict(zip(unique, counts))
+    for i in range(unique[-1]):
+        if i not in second_counts:
+            second_counts[i] = 0
 
+    rolling_window = np.convolve(counts[5:70], np.ones(1) / 1, 'valid')
     mean_latency = np.mean(latencies)
     print(f'Mean latency: {mean_latency}')
 
     # df = pd.DataFrame(np.ones(len(end_times)), index=end_times)
+    df = pd.DataFrame(rolling_window)
     # df = df.rolling(window="1S").sum()
     with pd.option_context('display.max_rows', None,
                            'display.max_columns', None,
@@ -65,10 +58,10 @@ def plot_performance(filename: str, ax=None):
         # print(end_times)
         # print(second_counts)
         shift_by = 10
-        rdf = pd.DataFrame(index=indices[shift_by:] - shift_by, data=latency_array[shift_by:]) \
-            # .rolling(1, center=True).mean()
+        rdf = pd.DataFrame(index=unique[shift_by:] - shift_by, data=counts[shift_by:]) \
+            .rolling(1, center=True).mean()
         rdf_portion = rdf[0:]
-        print(rdf_portion)
+        # print(rdf_portion)
         rdf_ax = rdf_portion.plot(color='k')
         # rdf_ax.axvline(25, color='r', linestyle='--', zorder=1)
         # rdf_ax.text(26, 100, 'Follower Crash', color='r')
@@ -76,8 +69,13 @@ def plot_performance(filename: str, ax=None):
         # rdf_ax.arrow(10, 300, 14, 133, width=1, color='k')
         return rdf_ax
 
+    if ax is None:
+        return df.plot()
+    else:
+        df.plot(ax=ax)
 
-filename = "data/1-kv_pairs_2023-11-01T19-12-57-follower_1_crash_1_client.csv"
+
+filename = "data/5900-kv_pairs_2023-11-01T22-29-26-leader_straggler_5900.csv"
 # if len(sys.argv) != 2:
 #     if fname not in globals():
 #         raise ValueError(f"Unexpected number of program arguments: ${len(sys.argv)}")
@@ -92,22 +90,28 @@ num_clients = int(match.group(1))
 ax = plot_performance(filename)
 # ax.annotate("Follower Crash", xy=(34, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
 # ax.annotate("Follower Restart", xy=(44, 10000), xytext=(5, 250), arrowprops={'width': 1.5, 'headwidth': 10, 'color': 'r'}, color='r', fontsize='large')
-ax.axvline(25, ymax=0.9, color='r', linestyle='--', zorder=1)
-ax.text(17, 800, 'Follower\nCrash', color='r')
-ax.axvline(36, ymax=0.96, color='b', linestyle='--', zorder=1)
-ax.text(38, 750, 'Follower\nRejoins\nCluster', color='b')
+ax.axvline(25, ymax=0.8, color='m', linestyle='--', zorder=1)
+ax.text(15, 20000, 'Leader\nStarts\nStraggling', color='m')
+ax.axvline(40, ymax=0.4, color='c', linestyle='--', zorder=1)
+ax.text(41, 18000, 'Leader\nStops\nStraggling', color='c')
+# ax.annotate('', xy=(31.5, 5100), xytext=(38, 5100), arrowprops={'width': 1, 'headwidth': 6, 'color': 'darkorange'}, color='darkorange', fontsize='large')
+
 
 # ax.legend(['Performance'])
 ax.legend().set_visible(False)
 ax.set_xlabel('Seconds')
-ax.set_ylabel('Latency [μs]')
+ax.set_ylabel('Throughput [req/s]')
 ax.set_xticks(np.arange(0, 65, 5))
-ax.set_yticks(np.arange(0, 1501, 100))
+ax.set_yticks(np.arange(0, 70001, 5000))
+title = f'Throughput for {num_clients} Concurrent Client Requests'
+if num_clients == 1:
+    title = f'Throughput for Sequential Client Requests'
 
+# ax.set_title(title)
 # ax.set_xlim(0, ax.get_xlim()[1])
 ax.set_xlim(0, 60)
-ax.set_ylim(0, ax.get_ylim()[1])
 # ax.set_ylim(0, ax.get_ylim()[1])
-plt.savefig(f"latency_follower_1_crash_{num_clients}_client_{random.Random().randint(0, 10000)}.pdf", bbox_inches='tight', pad_inches=0.05)
+ax.set_ylim(0, ax.get_ylim()[1])
+plt.savefig(f"leader_straggler_{num_clients}_client_right.pdf", bbox_inches='tight', pad_inches=0.05)
 plt.show()
 plt.clf()
